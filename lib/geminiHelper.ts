@@ -90,8 +90,8 @@ export async function runChat(
     const response = await result.response;
     // Clean the response text before returning it
     const rawText = response.text();
-    const cleanedText = cleanResponseText(rawText);
-    return cleanedText;
+    // const cleanedText = cleanResponseText(rawText);
+    return rawText;
   } catch (error: any) {
     console.error(`Gemini AI Error: ${error.message}`);
     return "Sorry, I couldn't process that request.";

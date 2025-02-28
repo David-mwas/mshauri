@@ -7,6 +7,7 @@ import { Mic, MicOff, ArrowLeft } from "lucide-react";
 import { db } from "../../firebase";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useSpeechSynthesis } from "react-speech-kit";
 import {
   collection,
   addDoc,
@@ -31,6 +32,8 @@ export default function VoiceInteraction() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
   const [recognition, setRecognition] = useState<any>(null);
+  const { speak, speaking, voices, cancel } = useSpeechSynthesis();
+  console.log(voices);
 
   // Set up voice recognition only on the client
   useEffect(() => {
@@ -120,7 +123,9 @@ export default function VoiceInteraction() {
 5. Dr. David Ndonye – Internist (specialist in diabetes, nutrition, and overall metabolic care)
 Please type the name of the doctor you'd like to book an appointment with.`;
       addMessage(suggestion, "assistant");
-      speak(suggestion);
+      if (!speaking) {
+        speak({ text: suggestion, voice: voices[4] });
+      }
       setProcessingMessage("");
       return;
     }
@@ -129,7 +134,14 @@ Please type the name of the doctor you'd like to book an appointment with.`;
     try {
       const responseText = await runChat(userText, history);
       addMessage(responseText, "assistant");
-      speak(responseText);
+      if (!speaking) {
+        speak({
+          text: responseText.replace(/[*_#`]/g, "").trim(),
+          voice: voices[2],
+        });
+      }
+
+      // speak(responseText);
     } catch (error) {
       console.error("AI Error:", error);
       addMessage("Sorry, I couldn't process that.", "assistant");
@@ -139,14 +151,14 @@ Please type the name of the doctor you'd like to book an appointment with.`;
   };
 
   // Wrap speech synthesis in a client-side check
-  const speak = (text: string) => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      const speech = new SpeechSynthesisUtterance(text);
-      speech.lang = "sw-KE";
-      speech.rate = 1.1;
-      window.speechSynthesis.speak(speech);
-    }
-  };
+  // const speak = (text: string) => {
+  //   if (typeof window !== "undefined" && window.speechSynthesis) {
+  //     const speech = new SpeechSynthesisUtterance(text);
+  //     speech.lang = "sw-KE";
+  //     speech.rate = 1.1;
+  //     window.speechSynthesis.speak(speech);
+  //   }
+  // };
 
   const handleSendTypedText = () => {
     if (!typedText.trim()) return;
@@ -156,8 +168,11 @@ Please type the name of the doctor you'd like to book an appointment with.`;
   };
 
   const stopSpeech = () => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+    // if (typeof window !== "undefined" && window.speechSynthesis) {
+    //   window.speechSynthesis.cancel();
+    // }
+    if (speaking) {
+      cancel();
     }
   };
 
