@@ -14,14 +14,7 @@ import {
   orderBy,
   onSnapshot,
 } from "firebase/firestore";
-import { runChat } from "@/lib/geminiHelper"; // Import the helper function
-
-// Web Speech API for Voice Recognition & Speech Synthesis
-const SpeechRecognition =
-  (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-const recognition = new SpeechRecognition();
-recognition.continuous = false;
-recognition.lang = "sw-KE";
+import { runChat } from "@/lib/geminiHelper";
 
 type Message = {
   id: string;
@@ -35,11 +28,39 @@ export default function VoiceInteraction() {
   const [isListening, setIsListening] = useState(false);
   const [processingMessage, setProcessingMessage] = useState("");
   const [typedText, setTypedText] = useState("");
-
-  // Reference to the end of messages container for auto-scroll
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const isFirstLoad = useRef(true);
+  const [recognition, setRecognition] = useState<any>(null);
 
+  // Set up voice recognition only on the client
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const SpeechRecognition =
+        (window as any).SpeechRecognition ||
+        (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recog = new SpeechRecognition();
+        recog.continuous = false;
+        recog.lang = "sw-KE";
+        setRecognition(recog);
+      }
+    }
+  }, []);
+
+  // Attach recognition event listeners when recognition is available
+  useEffect(() => {
+    if (recognition) {
+      recognition.onresult = (event: any) => {
+        const text: string = event.results[0][0].transcript;
+        addMessage(text, "user");
+        fetchAIResponse(text);
+      };
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+    }
+  }, [recognition]);
+
+  // Fetch messages from Firestore
   useEffect(() => {
     const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -50,7 +71,7 @@ export default function VoiceInteraction() {
     return () => unsubscribe();
   }, []);
 
-  // Auto-scroll to the bottom when messages change
+  // Auto-scroll to bottom when messages update
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
@@ -69,8 +90,8 @@ export default function VoiceInteraction() {
     await addDoc(collection(db, "messages"), newMessage);
   };
 
-  // Toggle listening functionality
   const toggleListening = () => {
+    if (!recognition) return;
     if (isListening) {
       recognition.stop();
       setIsListening(false);
@@ -80,14 +101,6 @@ export default function VoiceInteraction() {
     }
   };
 
-  recognition.onresult = (event: any) => {
-    const text: string = event.results[0][0].transcript;
-    addMessage(text, "user");
-    fetchAIResponse(text);
-  };
-  recognition.onerror = () => setIsListening(false);
-  recognition.onend = () => setIsListening(false);
-
   const buildConversationHistory = () => {
     return messages.map((msg) => ({
       role: msg.sender === "user" ? "user" : "model",
@@ -95,7 +108,6 @@ export default function VoiceInteraction() {
     }));
   };
 
-  // Fetch AI response with appointment booking logic
   const fetchAIResponse = async (userText: string) => {
     const history = buildConversationHistory();
     const lowerText = userText.toLowerCase();
@@ -126,11 +138,14 @@ Please type the name of the doctor you'd like to book an appointment with.`;
     }
   };
 
+  // Wrap speech synthesis in a client-side check
   const speak = (text: string) => {
-    const speech = new SpeechSynthesisUtterance(text);
-    speech.lang = "sw-KE";
-    speech.rate = 1.1;
-    window.speechSynthesis.speak(speech);
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      const speech = new SpeechSynthesisUtterance(text);
+      speech.lang = "sw-KE";
+      speech.rate = 1.1;
+      window.speechSynthesis.speak(speech);
+    }
   };
 
   const handleSendTypedText = () => {
@@ -141,7 +156,9 @@ Please type the name of the doctor you'd like to book an appointment with.`;
   };
 
   const stopSpeech = () => {
-    window.speechSynthesis.cancel();
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
   };
 
   return (
