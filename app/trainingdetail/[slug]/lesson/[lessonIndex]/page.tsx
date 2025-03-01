@@ -280,7 +280,7 @@ export default function LessonDetailPage() {
     return (
       <main className="min-h-screen bg-white p-6">
         <h1 className="text-3xl font-bold">Lesson Not Found</h1>
-        <Button onClick={() => router.push(`/training/${moduleSlug}`)}>
+        <Button onClick={() => router.push(`/trainingdetail/${moduleSlug}`)}>
           Back to Module
         </Button>
       </main>
@@ -297,7 +297,7 @@ export default function LessonDetailPage() {
           variant="ghost"
           size="icon"
           className="mr-2"
-          onClick={() => router.push(`/training/${moduleSlug}`)}
+          onClick={() => router.push(`/trainingdetail/${moduleSlug}`)}
         >
           <ArrowLeft className="h-6 w-6" />
         </Button>
@@ -369,7 +369,7 @@ export default function LessonDetailPage() {
       </section>
 
       {/* Back Button */}
-      <Button onClick={() => router.push(`/training/${moduleSlug}`)}>
+      <Button onClick={() => router.push(`/trainingdetail/${moduleSlug}`)}>
         Back to Module
       </Button>
     </main>
